@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<body style="margin: 0; overscroll-behavior: none; touch-action: none;">
+<body style="margin: 0; overscroll-behavior: none; touch-action: none; user-select: none;">
 <canvas id="canvas"></canvas>
 <script>
     const canvas = document.getElementById('canvas');
@@ -8,8 +8,8 @@
 
     const gridHeight = window.innerHeight;
     const gridWidth = window.innerWidth;
-    const cellHeight = Math.floor(gridHeight / 500);
-    const cellWidth = Math.floor(gridWidth / 500);
+    const cellHeight = Math.floor(gridHeight / 250);
+    const cellWidth = Math.floor(gridWidth / 250);
     canvas.width = gridWidth;
     canvas.height = gridHeight;
 
@@ -138,10 +138,12 @@
             canvas.ontouchstart = (e) => {
                 setState({hue: nextHue(1)});
                 setState({spawnPos: {x: e.touches[0].clientX, y: e.touches[0].clientY}});
+                e.preventDefault();
             };
             canvas.ontouchmove = (e) => {
                 setState({hue: nextHue(1)});
                 setState({spawnPos: {x: e.touches[0].clientX, y: e.touches[0].clientY}});
+                e.preventDefault();
             };
             canvas.ontouchend = () => {
                 setState({spawnPos: {x: undefined, y: undefined}});
