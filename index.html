@@ -1,107 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
 <body>
-<div style="display: flex; gap: 20px; ">
+<div style="display: flex; justify-content: center">
     <canvas id="canvas"></canvas>
-    <form style="display: flex; flex-direction: column; justify-content: center">
-        <h1>Sand sim</h1>
-        <label for="gridSize">Grid Size</label>
-        <input type="range" id="gridSize" min="200" max="2000">
-        <label for="cellSize">Cell Size</label>
-        <input type="range" id="cellSize" min="1" max="50">
-        <label for="maxClusterSize">Cluster Size</label>
-        <input type="range" id="maxClusterSize" min="1" max="200">
-        <label for="hue">Hue</label>
-        <input type="range" id="hue" min="1" max="255">
-        <label for="randomhue">Random Hue</label>
-        <input type="checkbox" id="randomhue" checked>
-        <label for="holdhue">New Hue per hold</label>
-        <input type="checkbox" id="holdhue">
-        <em>
-            (hold shift to delete sand)
-        </em>
-    </form>
 </div>
 <script>
-
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
+
+    const defaultMaxClusterSize = 25;
+    const gridHeight = window.innerHeight - 50;
+    const gridWidth = window.innerWidth - 50;
+    const cellHeight = 2;
+    const cellWidth = 2;
+    canvas.width = gridWidth;
+    canvas.height = gridHeight;
+
     const state = {
-        size: 1000,
-        cellSize: 5,
-        maxClusterSize: 25,
+        maxClusterSize: defaultMaxClusterSize,
         hue: 1,
-        isRandomHue: true,
-        isHoldHue: false,
         isDelete: false,
-        grid: createGrid(5, 1000),
+        grid: createGrid(),
         spawnPos: {x: undefined, y: undefined},
     }
-    const setState = (newState) => {
-        let formNeedsUpdate = (newState.maxClusterSize && newState.maxClusterSize !== state.maxClusterSize)
-            || (newState.hue && newState.hue !== state.hue)
-            || (newState.cellSize && newState.cellSize !== state.cellSize)
-            || (newState.size && newState.size !== state.size)
-            || (newState.isRandomHue && newState.isRandomHue !== state.isRandomHue)
-            || (newState.isHoldHue && newState.isHoldHue !== state.isHoldHue)
 
+    const setState = (newState) => {
         Object.assign(state, newState);
-        if (formNeedsUpdate) {
-            updateFormValues();
-        }
     }
 
     function drawGrid() {
-        //ctx.clearRect(0, 0, state.size, state.size);
+        //ctx.clearRect(0, 0, gridWidth, gridHeight);
         ctx.fillStyle = 'black';
-        ctx.fillRect(0, 0, state.size, state.size);
-        for (let i = 0; i < state.size; i += state.cellSize) {
-            for (let j = 0; j < state.size; j += state.cellSize) {
-                let cell = state.grid[i][j];
+        ctx.fillRect(0, 0, gridWidth, gridHeight);
+        for (let w = 0; w < gridWidth; w += cellWidth) {
+            for (let h = 0; h < gridHeight; h += cellHeight) {
+                let cell = state.grid[w][h];
                 if (cell !== 0) {
                     ctx.fillStyle = `hsl(${cell}, 100%, 50%)`;
-                    ctx.fillRect(i, j, state.cellSize, state.cellSize);
+                    ctx.fillRect(w, h, cellWidth, cellHeight);
                 }
             }
         }
     }
 
     function makeNextGrid() {
-        let nextGrid = createGrid(state.cellSize, state.size);
-        for (let i = 0; i < state.size; i += state.cellSize) {
-            for (let j = 0; j < state.size; j += state.cellSize) {
-                if (state.grid[i][j] === 0) {
+        let nextGrid = createGrid();
+        for (let w = 0; w < gridWidth; w += cellWidth) {
+            for (let h = 0; h < gridHeight; h += cellHeight) {
+                if (state.grid[w][h] === 0) {
                     continue;
                 }
 
-                let cellBelow = state.grid[i][j + state.cellSize];
-                let cellBelowLeft = state.grid[i - state.cellSize] && state.grid[i - state.cellSize][j + state.cellSize];
-                let cellBelowRight = state.grid[i + state.cellSize] && state.grid[i + state.cellSize][j + state.cellSize];
+                let cellBelow = state.grid[w][h + cellHeight];
+                let cellBelowLeft = state.grid[w - cellWidth] && state.grid[w - cellWidth][h + cellHeight];
+                let cellBelowRight = state.grid[w + cellWidth] && state.grid[w + cellWidth][h + cellHeight];
 
                 if (cellBelow === 0) {
-                    nextGrid[i][j + state.cellSize] = state.grid[i][j]
-                    nextGrid[i][j] = 0;
+                    nextGrid[w][h + cellHeight] = state.grid[w][h]
+                    nextGrid[w][h] = 0;
                 } else if (cellBelowLeft === 0 && cellBelowRight === 0) {
-                    nextGrid[i + (state.cellSize * (Math.random() < 0.5 ? -1 : 1))][j + state.cellSize] = state.grid[i][j]
-                    nextGrid[i][j] = 0;
+                    nextGrid[w + (cellWidth * (Math.random() < 0.5 ? -1 : 1))][h + cellHeight] = state.grid[w][h]
+                    nextGrid[w][h] = 0;
                 } else if (cellBelowLeft === 0) {
-                    nextGrid[i - state.cellSize][j + state.cellSize] = state.grid[i][j]
-                    nextGrid[i][j] = 0;
+                    nextGrid[w - cellWidth][h + cellHeight] = state.grid[w][h]
+                    nextGrid[w][h] = 0;
                 } else if (cellBelowRight === 0) {
-                    nextGrid[i + state.cellSize][j + state.cellSize] = state.grid[i][j]
-                    nextGrid[i][j] = 0;
+                    nextGrid[w + cellWidth][h + cellHeight] = state.grid[w][h]
+                    nextGrid[w][h] = 0;
                 } else {
-                    nextGrid[i][j] = state.grid[i][j];
+                    nextGrid[w][h] = state.grid[w][h];
                 }
             }
         }
         setState({grid: nextGrid});
-    }
-
-    function setHue(newHue) {
-        setState({hue: newHue});
-    }
-
-    function setSpawnPos(newPos) {
-        setState({spawnPos: newPos});
     }
 
     function animate() {
@@ -115,7 +86,6 @@
         if (state.hue > 255 - step) {
             return step;
         } else {
-            // TODO: wrap when negative
             return Math.max(0, state.hue + step);
         }
     }
@@ -126,8 +96,8 @@
             return;
         }
 
-        let xCell = Math.floor(x / state.cellSize) * state.cellSize;
-        let yCell = Math.floor(y / state.cellSize) * state.cellSize;
+        let xCell = Math.floor(x / cellWidth) * cellWidth;
+        let yCell = Math.floor(y / cellHeight) * cellHeight;
 
         if (!state.grid[xCell] || state.grid[xCell][yCell] === undefined) {
             return;
@@ -153,103 +123,105 @@
 
     }
 
-    function createGrid(cellSize, size) {
+    function createGrid() {
         let grid = [];
-        for (let i = 0; i < size; i += cellSize) {
-            grid[i] = [];
-            for (let j = 0; j < size; j += cellSize) {
-                grid[i][j] = 0;
+        for (let w = 0; w < gridWidth; w += cellWidth) {
+            grid[w] = [];
+            for (let h = 0; h < gridHeight; h += cellHeight) {
+                grid[w][h] = 0;
             }
         }
         return grid;
     }
 
     function start() {
-        canvas.onmousemove = (e) => {
-            if (e && e.buttons === 0) {
-                setSpawnPos({x: undefined, y: undefined});
-                return;
-            }
+        if ('ontouchstart' in window) {
 
-            if (state.isDelete) {
-                setHue(0);
-            } else if (state.isRandomHue && !state.isHoldHue) {
-                setHue(nextHue(1));
-            }
-            setSpawnPos({x: e.offsetX, y: e.offsetY});
-        };
-        canvas.onmousedown = (e) => {
-            if (state.isDelete) {
-                setHue(0);
-            } else if (state.isHoldHue) {
-                setHue(nextHue(25));
-            }
-            setSpawnPos({x: e.offsetX, y: e.offsetY});
-        };
-        canvas.onmouseup = () => {
-            setSpawnPos({x: undefined, y: undefined});
-        };
-        document.onkeydown = (e) => {
-            if (e.key === 'Shift') {
-                setState({isDelete: true});
-            }
-        };
-        document.onkeyup = (e) => {
-            if (e.key === 'Shift') {
-                setState({isDelete: false});
-            }
-        };
-        document.onwheel = (e) => {
-            // TODO: control cluster size instead of hue
-            if (e.deltaY > 0) {
-                setHue(nextHue(25));
-            } else {
-                setHue(nextHue(-25));
-            }
-        };
+            canvas.ontouchstart = (e) => {
+                setState({hue: nextHue(1)});
+                if (e.touches.length === 3) {
+                    // three fingers === delete
+                    setState({hue: 0});
+                }
+                if (e.touches.length === 2) {
+                    // two fingers set maxClusterSize to distance between points
+                    let x1 = e.touches[0].clientX;
+                    let y1 = e.touches[0].clientY;
+                    let x2 = e.touches[1].clientX;
+                    let y2 = e.touches[1].clientY;
+                    let distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+                    setState({maxClusterSize: Math.floor(distance / 10)});
+                }
+                if (e.touches.length === 1) {
+                    setState({maxClusterSize: defaultMaxClusterSize})
+                }
+                setState({spawnPos: {x: e.touches[0].clientX, y: e.touches[0].clientY}});
+            };
+            canvas.ontouchmove = (e) => {
+                setState({hue: nextHue(1)});
 
-        canvas.width = state.size;
-        canvas.height = state.size;
-        setState({grid: createGrid(state.cellSize, state.size)});
-        updateFormValues();
+                if (e.touches.length === 3) {
+                    // three fingers === delete
+                    setState({hue: 0});
+                }
+                if (e.touches.length === 2) {
+                    // two fingers set maxClusterSize to distance between points
+                    let x1 = e.touches[0].clientX;
+                    let y1 = e.touches[0].clientY;
+                    let x2 = e.touches[1].clientX;
+                    let y2 = e.touches[1].clientY;
+                    let distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+                    setState({maxClusterSize: Math.floor(distance / 10)});
+                }
+                if (e.touches.length === 1) {
+                    setState({maxClusterSize: defaultMaxClusterSize})
+                }
+                setState({spawnPos: {x: e.touches[0].clientX, y: e.touches[0].clientY}});
+            };
+            canvas.ontouchend = () => {
+                setState({spawnPos: {x: undefined, y: undefined}});
+            };
+        } else {
+            canvas.onmousemove = (e) => {
+                if (e && e.buttons === 0) {
+                    setState({spawnPos: {x: undefined, y: undefined}});
+                    return;
+                }
+
+                if (state.isDelete) {
+                    setState({hue: 0});
+                } else {
+                    setState({hue: nextHue(1)});
+                }
+                setState({spawnPos: {x: e.offsetX, y: e.offsetY}});
+            };
+            canvas.onmousedown = (e) => {
+                if (state.isDelete) {
+                    setState({hue: 0});
+                }
+                setState({spawnPos: {x: e.offsetX, y: e.offsetY}});
+            };
+            canvas.onmouseup = () => {
+                setState({spawnPos: {x: undefined, y: undefined}});
+            };
+            document.onkeydown = (e) => {
+                if (e.key === 'Shift') {
+                    setState({isDelete: true});
+                }
+            };
+            document.onkeyup = (e) => {
+                if (e.key === 'Shift') {
+                    setState({isDelete: false});
+                }
+            };
+        }
+        setState({grid: createGrid()});
         requestAnimationFrame(animate);
     }
 
-    function setupFormHandlers() {
-        document.getElementById('maxClusterSize').onchange = (e) => {
-            setState({maxClusterSize: Number.parseInt(e.target.value, 10)});
-        };
-        document.getElementById('hue').onchange = (e) => {
-            setState({hue: Number.parseInt(e.target.value, 10)});
-        };
-        document.getElementById('randomhue').onchange = (e) => {
-            setState({isRandomHue: e.target.checked});
-        };
-        document.getElementById('holdhue').onchange = (e) => {
-            setState({isHoldHue: e.target.checked});
-        };
-        document.getElementById('cellSize').onchange = (e) => {
-            setState({cellSize: Number.parseInt(e.target.value, 10)});
-            start();
-        };
-        document.getElementById('gridSize').onchange = (e) => {
-            setState({size: Number.parseInt(e.target.value, 10)});
-            start();
-        };
-    }
-
-    function updateFormValues() {
-        document.getElementById('maxClusterSize').value = state.maxClusterSize;
-        document.getElementById('hue').value = state.hue;
-        document.getElementById('cellSize').value = state.cellSize;
-        document.getElementById('gridSize').value = state.size;
-        document.getElementById('randomhue').checked = state.isRandomHue;
-        document.getElementById('holdhue').checked = state.isHoldHue;
-    }
-
-    setupFormHandlers();
     setState({});
     start();
 
 </script>
 </body>
+</html>
